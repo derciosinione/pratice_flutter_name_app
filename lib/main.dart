@@ -29,19 +29,9 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
   var favorites = <WordPair>[];
-  var expandMenu = false;
 
   void getNext() {
     current = WordPair.random();
-    notifyListeners();
-  }
-
-  void hideMenu() {
-    if (expandMenu) {
-      expandMenu = false;
-    } else {
-      expandMenu = true;
-    }
     notifyListeners();
   }
 
@@ -57,63 +47,127 @@ class MyAppState extends ChangeNotifier {
   }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  var selectedIndex = 0;
+  var expandMenu = false;
+
+  void hideMenu() {
+    setState(() {
+      if (expandMenu) {
+        expandMenu = false;
+      } else {
+        expandMenu = true;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget page;
+    switch (selectedIndex) {
+      case 0:
+        page = GeneratorPage();
+        break;
+      case 1:
+        page = FavoritesPages();
+        break;
+      default:
+        throw UnimplementedError('no widget for $selectedIndex');
+    }
+
+    return LayoutBuilder(builder: (context, constraints) {
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: expandMenu,
+                destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text('Home'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.favorite),
+                    label: Text('Favorite'),
+                  ),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  setState(() {
+                    selectedIndex = value;
+                  });
+                },
+              ),
+            ),
+            Expanded(
+                child: Column(
+              children: [
+                Container(
+                  color: Colors.white,
+                  height: 50,
+                  child: Row(children: [
+                    SizedBox(width: 10),
+                    IconButton(
+                      onPressed: () {
+                        hideMenu();
+                      },
+                      icon: Icon(
+                        Icons.menu,
+                      ),
+                    )
+                  ]),
+                ),
+                Expanded(
+                  child: Container(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: page,
+                  ),
+                ),
+              ],
+            ))
+          ],
+        ),
+      );
+    });
+  }
+}
+
+class FavoritesPages extends StatelessWidget {
+  const FavoritesPages({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
 
-    return Scaffold(
-      body: Row(
-        children: [
-          SafeArea(
-            child: NavigationRail(
-              extended: appState.expandMenu,
-              destinations: [
-                NavigationRailDestination(
-                  icon: Icon(Icons.home),
-                  label: Text('Home'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.favorite),
-                  label: Text('Favorite'),
-                ),
-              ],
-              selectedIndex: 0,
-              onDestinationSelected: (value) {
-                print('selected $value');
-              },
-            ),
-          ),
-          Expanded(
-              child: Column(
-            children: [
-              Container(
-                color: Colors.white,
-                height: 50,
-                child: Row(children: [
-                  SizedBox(width: 10),
-                  IconButton(
-                    onPressed: () {
-                      appState.hideMenu();
-                    },
-                    icon: Icon(
-                      Icons.menu,
-                    ),
-                  )
-                ]),
-              ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: GeneratorPage(),
-                ),
-              ),
-            ],
-          ))
-        ],
-      ),
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text('No favorites yet.'),
+      );
+    }
+
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text('You have '
+              '${appState.favorites.length} favorites:'),
+        ),
+        for (var pair in appState.favorites)
+          ListTile(
+            leading: Icon(Icons.favorite),
+            title: Text(pair.asLowerCase),
+          )
+      ],
     );
   }
 }
